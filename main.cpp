@@ -79,7 +79,7 @@ int main()
      msg.len =8;
     MX_UART4_DMA_Init();
     MX_UART4_Init();
-    //printf("HAL_UART_Receive_DMA() return %d\r\n",HAL_UART_Receive_DMA(&huart4, propoMainBuf,PROPO_MAINBUF_SIZE)); // プロポと通信開始(SerialDMA)
+    printf("HAL_UART_Receive_DMA() return %d\r\n",HAL_UART_Receive_DMA(&huart4, propoMainBuf,PROPO_MAINBUF_SIZE)); // プロポと通信開始(SerialDMA)
   
     while (1) {
     
@@ -131,12 +131,12 @@ int main()
 
     //printf("%d %d %d %d %d\n", msg.data[2]<<8,msg.data[2],msg.data[3],(msg.data[2]<<8)+msg.data[3],shift_data_msg);
 
-    printf("rpm:%d stickData[2]:%f  \n",shift_data_msg,stickData[2]);
-     
-    }
-     while(t.read_us() <= 1000){};
+    //printf("rpm:%d stickData[2]:%f  \n",shift_data_msg,stickData[2]);
+        while(t.read_us() <= 1000){};
         t.stop();
         t.reset();
+    }
+
      
 }
 
