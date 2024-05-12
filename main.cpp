@@ -12,14 +12,15 @@ CAN can1(PB_8,PB_9,1000*1000);//PB_8が受信側(CAN1_RD) PB_9が送信側(CAN1_
 Timer t;
 int16_t shift_data_robo ;
 int16_t shift_data_msg ;
+Serial pc(USBTX,USBRX);//ボーレートをいじる printfの前にpc.を付ける
 
 
 short target;
-const float gain_p = 0.1f;
-const float gain_d = 0.1f;
+const float gain_p = 0.038f;
+const float gain_d = 0.035f;
 float pre_diff = 0.0f;
 float differential = 0.0f;
-
+int16_t V_error;
 //pulopo
 //constexprはコンパイル時に値が確定して、定数として計算される
 constexpr int NUM_OF_STICK = 4;  // スティックのチャンネル数
@@ -65,7 +66,8 @@ void Error_Handler(void);
 int main()
 {
     t.start(); 
-    LED=1;
+    
+    pc.baud(115200);
     //送信
     CANMessage robo;
     robo.id = 0x1ff;
@@ -82,7 +84,7 @@ int main()
     //printf("HAL_UART_Receive_DMA() return %d\r\n",HAL_UART_Receive_DMA(&huart4, propoMainBuf,PROPO_MAINBUF_SIZE)); // プロポと通信開始(SerialDMA)
   
     while (1) {
-    
+         t.start();
 
         if (propoMainBuf[0] == 0x0f) // もしスタートバイトが配列の1つ目にあるなら
         {
@@ -95,14 +97,14 @@ int main()
         else {
             // // こちらがDMAをリセットして再度初期化する何か
             // /*DMAとUARTとGPIOを初期化解除*/
-            printf("MX_DMA_UART4_DeInit() return %d\r\n", MX_DMA_UART4_DeInit()); // おそらく必要ない？
+            pc.printf("MX_DMA_UART4_DeInit() return %d\r\n", MX_DMA_UART4_DeInit()); // おそらく必要ない？
             // pc.printf("MX_GPIO_DeInit() return %d\r\n",MX_GPIO_DeInit());
-            printf("MX_UART4_DeInit() return %d\r\n", MX_UART4_DeInit());
+            pc.printf("MX_UART4_DeInit() return %d\r\n", MX_UART4_DeInit());
 
             // /*DMAとUARTとGPIOを再度初期化*/
             MX_UART4_DMA_Init();
             MX_UART4_Init();
-            printf("HAL_UART_Receive_DMA() return %d\r\n",HAL_UART_Receive_DMA(&huart4, propoMainBuf, PROPO_MAINBUF_SIZE)); // プロポと通信開始(SerialDMA)
+            pc.printf("HAL_UART_Receive_DMA() return %d\r\n",HAL_UART_Receive_DMA(&huart4, propoMainBuf, PROPO_MAINBUF_SIZE)); // プロポと通信開始(SerialDMA)
         }
 
 
@@ -112,8 +114,8 @@ int main()
 
      //送信
      //pd制御
-       if(std::abs(stickData[2])>0.006){
-    target= 180*stickData[2];
+       if(std::abs(stickData[2])>0.04){
+    target= 160*stickData[2]+2;
        }
        else target=0;
     float diff = target -shift_data_msg; //目標値との偏差をとる
@@ -128,15 +130,22 @@ int main()
     //受信
     can1.read(msg);
      shift_data_msg =(msg.data[2]<<8)+msg.data[3];//速度
-
+    
+    V_error=std::abs(target-shift_data_msg);
+    if(target!=0&&V_error>std::abs(target/100*15)){
+        LED=1;
+    }
+    else LED=0;
+    //printf("%+d  %+d\n",target,shift_data_msg);
+    //printf("%d \n",shift_data_msg);
     //printf("%d %d %d %d %d\n", msg.data[2]<<8,msg.data[2],msg.data[3],(msg.data[2]<<8)+msg.data[3],shift_data_msg);
 
-    printf("rpm:%d stickData[2]:%f  \n",shift_data_msg,stickData[2]);
-     
-    }
+    //printf("rpm:%d stickData[2]:%f  \n",shift_data_msg,stickData[2]);
      while(t.read_us() <= 1000){};
         t.stop();
         t.reset();
+    }
+     
      
 }
 
